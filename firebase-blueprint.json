@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Tournament": {
+      "title": "Tournament",
+      "description": "A tournament with teams, categories, and scores",
+      "type": "object",
+      "properties": {
+        "game": {
+          "type": "string",
+          "description": "The game being played (e.g., Free Fire, PUBG)"
+        },
+        "numMatches": {
+          "type": "number",
+          "description": "Number of matches"
+        },
+        "maps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Maps for each match"
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "name": { "type": "string" },
+              "slot": { "type": "number" }
+            },
+            "required": ["id", "name", "slot"]
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "isScoring": { "type": "boolean" }
+            },
+            "required": ["name", "isScoring"]
+          }
+        },
+        "scores": {
+          "type": "object",
+          "description": "Map of teamId to map of categoryName to score"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the user who created the tournament"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["game", "numMatches", "maps", "teams", "categories", "scores", "ownerId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/tournaments/{tournamentId}": {
+      "schema": {
+        "$ref": "#/entities/Tournament"
+      },
+      "description": "Stores tournament details and live scores"
+    }
+  }
+}

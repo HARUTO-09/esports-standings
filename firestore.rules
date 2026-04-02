@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: tournaments
+    // Document ID: {tournamentId} (e.g. 6-character code)
+    // Fields:
+    //   - game: string (required)
+    //   - numMatches: number (required)
+    //   - maps: list of strings (required)
+    //   - teams: list of objects (required)
+    //   - categories: list of objects (required)
+    //   - scores: map (required)
+    //   - ownerId: string (required, immutable)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.ownerId;
+    }
+
+    function uidUnchanged() {
+      return !('ownerId' in request.resource.data) || request.resource.data.ownerId == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('ownerId' in request.resource.data) || request.resource.data.ownerId == resource.data.ownerId;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidTournament(data) {
+      return data.game is string && data.game.size() > 0 && data.game.size() < 100 &&
+             data.numMatches is number && data.numMatches > 0 && data.numMatches <= 50 &&
+             data.maps is list && data.maps.size() == data.numMatches &&
+             data.teams is list && data.teams.size() <= 100 &&
+             data.categories is list && data.categories.size() <= 20 &&
+             data.scores is map;
+    }
+
+    match /tournaments/{tournamentId} {
+      // Anyone can read the tournament to view live standings
+      allow read: if true;
+      
+      allow create: if isAuthenticated() && 
+                    hasRequiredFields(['game', 'numMatches', 'maps', 'teams', 'categories', 'scores', 'ownerId', 'createdAt']) &&
+                    isValidTournament(request.resource.data) &&
+                    request.resource.data.ownerId == request.auth.uid &&
+                    request.resource.data.createdAt is timestamp;
+                    
+      allow update: if isOwner() && 
+                    isValidTournament(request.resource.data) &&
+                    uidNotModified() &&
+                    request.resource.data.createdAt == resource.data.createdAt;
+                    
+      allow delete: if isOwner();
+    }
+  }
+}
